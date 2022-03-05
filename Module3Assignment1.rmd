@@ -1,0 +1,80 @@
+---
+title: "Module3Assignment1"
+author: "Lydia Suter"
+date: "2/3/2022"
+output: word_document
+---
+
+load libraries:
+```{r}
+library(tidyverse) #tidyverse set of packages and functions
+library(tidymodels)
+library(glmnet) #for Lasso, ridge, and elastic net models 
+library(GGally) #create ggcorr and ggpairs plots
+library(ggcorrplot) #create an alternative to ggcorr plots
+library(MASS) #access to forward and backward selection algorithms
+library(leaps) #best subset selection
+library(lmtest) #for the dw test
+library(splines) #for nonlinear fitting
+library(car) #for calculating the variance inflation factor
+library(rsample)
+library(ROCR)
+```
+
+```{r}
+library(readr)
+bike<- read_csv("bike_cleaned-2.csv",
+col_types = cols(dteday = col_date(format = "%m/%d/%Y")))
+```
+
+
+```{r}
+bike <- bike %>% mutate_if(is.character,as.factor)
+```
+
+```{r}
+bike$hr<-as.factor(bike$hr)#mdy is a lubridate package function
+```
+
+Split the data (training and testing). 70% of the data to training. Stratified the random split by the response variable "count".
+```{r}
+set.seed(1234)
+bike_split = initial_split(bike, prop = 0.70, strata = count)
+train = training(bike_split)
+test = testing(bike_split)
+```
+
+**How many rows of data are in each set (training and testing)?**
+train 12163 obs.
+test 5216 obs.
+
+**Task 3: Build a linear regression model (using the training set) to predict “count” using the variables“season”, “mnth”, “hr”, “holiday”, and “weekday”, “temp”, and “weathersit”. Comment on the quality of themodel. Be sure to note the Adjusted R-squared value.**
+
+```{r}
+bike2_recipe = recipe(count ~ weathersit + season +holiday+mnth+temp+weekday+hr, train)
+
+lm_model = #give the model type a name 
+  linear_reg() %>% #specify that we are doing linear regression
+  set_engine("lm") #specify the specify type of linear tool we want to use 
+
+lm_wflow = 
+  workflow() %>% 
+  add_model(lm_model) %>% 
+  add_recipe(bike2_recipe)
+
+lm_fit = fit(lm_wflow, train)
+summary(lm_fit$fit$fit$fit)
+
+```
+Let's assume (for the sake of time) that this model is our best model.  The R squared value for this model on the training set is around 0.6224. Now we need to evaluate its performance on the test set. Typically, we will see performance degrade a bit. If we see severe degradation, we assume that may have overfit the training set. 
+
+**Task 4:Use the predict functions to make predictions (using your model from Task 3) on the training set.Hint: Be sure to store the predictions in an object, perhaps named “predict_train” or similar.
+Develop a histogram of the predictions (Hint: The predictions are likely stored in a variable called “.pred”in your predictions object). Comment on the distribution of the predictions.**
+
+```{r}
+lm_fit %>% predict(test) %>% bind_cols(test) %>% metrics(truth = count, estimate = .pred)
+```
+
+
+**Task 5: Determine the R-squared value of the model on the testing set. Comment on how this value compares to the model’s performance on the training set.**
+Performance on the test set is similar to that on the training set. This suggests that our model is not overfitting.

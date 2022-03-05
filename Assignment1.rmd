@@ -1,0 +1,70 @@
+---
+title: "MissingData"
+author: "Lydia Suter"
+date: "2/10/2022"
+output: word_document
+---
+```{r}
+library(tidyverse)
+library(tidymodels)
+library(mice) #package for imputation
+library(VIM) #visualizing missingness
+library(naniar)
+library(skimr)
+```
+
+```{r}
+grades <- read_csv("class-grades.csv")
+```
+```{r}
+str(grades)
+summary(grades)
+
+```
+Task 1: Fo which variables is there missing data? tutorial-1,midterm-3,takehome-3, finals_4
+
+Task 2: Use the VIM package to visualize missingness. Are there any students that are missing multiple
+pieces of data? yes
+```{r}
+vim_plot = aggr(grades, numbers = TRUE, prop = c(TRUE, FALSE),cex.axis=.7)
+```
+```{r}
+vis_miss(grades) #from the naniar package
+```
+```{r}
+gg_miss_case(grades) #x axis is number of missing values in each row (case)
+```
+Task 3: Use row-wise deletion of missing values to create a new data frame. How many rows remain in
+this data frame?89
+```{r}
+grades_rowdel = grades%>% drop_na() 
+#alternatively can specify which variable(s) on which to do the drop_na
+#drop_na(Age)
+skim(grades_rowdel)
+```
+
+Task 4: Use column-wise deletion of missing values to create a new data frame (from the original data
+frame not from the data frame created in Task 3). How many columns remain in this data frame?2
+```{r}
+grades_coldel = grades %>% select(-Tutorial,-Midterm,-TakeHome,-Final) 
+vim_plot = aggr(grades_coldel, numbers = TRUE, prop = c(TRUE, FALSE),cex.axis=.7)
+skim(grades_coldel)
+```
+Task 5: Which approach (Task 3 or Task 4) seems preferable for this dataset? Briefly discuss your answer.row-wise deletion
+
+Task 6 Use the “mice” package to impute the missing data in this dataset. Set “m = 5” and “method
+=”pmm"" in the imputation. You MUST use a random number seed of 123 for this imputation. What is the
+mean value for the “Final” variable after imputation?
+```{r}
+set.seed(123) #sets seed for random number generator
+imp_grades = mice(grades, m=5, method='pmm', printFlag=FALSE)
+#m is the number of imputations, 5 is a reasonable value as a default
+#pmm is "predictive mean matching" = imputation method for numeric data
+#printFlag reduces amount of output
+summary(imp_grades)
+```
+```{r}
+grade_complete = complete(imp_grades) 
+summary(grade_complete)
+```
+
